@@ -17,7 +17,7 @@ class InstallTests(unittest.TestCase):
             root = Path(tmp)
             copied = root / 'installed-skill'
             shutil.copytree(SKILL, copied, ignore=shutil.ignore_patterns('__pycache__'))
-            for name in ('read_mail.py', 'brief_store.py', 'init_private.py'):
+            for name in ('read_mail.py', 'brief_store.py', 'init_private.py', 'source_checks.py'):
                 subprocess.run([sys.executable, str(copied / 'scripts' / name), '--help'],
                                cwd=tmp, check=True, capture_output=True)
             private = root / 'private'

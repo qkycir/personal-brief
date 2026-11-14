@@ -130,8 +130,18 @@ def apply(c, batch):
     with c:
         for kind in KINDS:
             for row in batch.get(kind,[]):
+                row = dict(row)
                 validate(kind,row)
                 prior = get(c,kind,row['id'])
+                if kind == 'sources':
+                    if row.get('selected_path'):
+                        row.setdefault('content_sha256', None)
+                    if row.get('run_id'):
+                        # A copied old result is not evidence of a new check.
+                        if prior and prior.get('run_id') != row['run_id'] and row.get('incremental_result') == prior.get('incremental_result'):
+                            row.pop('incremental_result', None)
+                        row['last_incremental_run_id'] = row['run_id']
+                        row['last_incremental_check'] = row['observed_at']
                 if kind == 'tasks' and prior and prior['state'] == 'completed' and row['state'] != 'completed':
                     raise ValueError('completed task cannot be automatically reopened')
                 if prior == row: continue

@@ -38,3 +38,6 @@ python3 <skill>/scripts/brief_store.py --data-dir <data> export
 新 session 以 SQLite 的 ready 和记录为准；MD 可供阅读但不是另一份真相。用户直接修改 `个人信息.md` 始终有效。画像导出仅包含有来源的候选背景，不自动写回用户信息。
 
 `check` 同时检查结构、事件引用和 active 任务的核验关联；已结束或中止的 run 不能再次 ready。被拒绝的批次不推进事件或来源状态。Markdown 导出失败而 SQLite 已提交时，先查询实际状态，再重试 export，不重做外部提醒写入。更新同一事件沿用稳定 id 并关联原事件，自动 revisions 保留修改前内容；已交接轮次的日期证据应以当轮 verification/原始缓存为准，不用后改的 events 内容冒充当时证据。
+
+
+来源增量字段：sources 提交当前 run_id 时，工具自动把 last_incremental_run_id / last_incremental_check 对齐到该 run_id / observed_at，跨轮原样复制的 incremental_result 会被移除，原记录仍保留在 revisions。selected_path 来源的 content_sha256 可为 null，表示尚未完成正文处理；observed_sha256 仅为文件观测，不能代替已处理指纹。具体核对流程见 collect-session.md 的“增量检查的实际执行”。

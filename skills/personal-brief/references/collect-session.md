@@ -19,7 +19,7 @@
 - 长通知必须展开并读到末尾，保留要求、日期和例外条件。不能用前5行、前600字或会话预览代表全文；需要控制上下文时分段读取。确实读不全则标body_complete:false及缺失范围，不能宣称完整覆盖，也不能据此断言没有其他截止要求。
 - 置顶与普通会话分别判断，不能因置顶的旧时间提前停止扫描。首次 QQ 回看哪些会话、多久，由 preferences.md 指定；未授权历史回看的会话只建列表基线。
 - 微信首次默认仅建立授权范围的列表基线；只有用户明确指定历史回看范围时才读旧正文。朋友圈是独立可选来源，默认关闭；启用后首次范围仍须单独确认，不随聊天采集自动打开。
-- 用户正在输入且操作会抢焦点时延后；无法判断时保守记录未采集，不夺取键盘。截图/AX 为空就如实停止，不绕过保护。
+- 用户正在输入且操作会抢焦点时延后；无法判断时保守记录未采集，不夺取键盘。截图全白而 AX 可读时，可通过 Computer Use 将已登录的正常窗口置前，再重新获取一次 AX 和截图；仍异常就停止该来源，记录窗口状态和错误。锁屏、权限拒绝、退出登录或安全提示直接停止，不反复重试或改权限。
 - 邮箱只调用已配置的只读读取能力。仅查未读会漏掉用户已读新邮件，应按独立进度/UID 判断；正文不标已读。不接受凭据作为上下文或输出。邮件入口未配置时标 blocked，不自行查看其他账号。
 - 邮箱本机工具将缓存与抓取游标分开。先扫描所有 mail-cache 下未处理缓存（包含先前中断轮次）；事件安全写入后才把缓存路径、UIDVALIDITY/UID 登记到 mail-processed.md。已抓取不等于已整理，不能只看最新轮次缓存。
 - `body_truncated:true` 或正文提取失败不能标为完整阅读；留待处理并说明截断范围，不据缺失正文推断“没有事项”。如需补读，仍用已授权的只读邮箱途径，不能输出凭据。抓取游标可以已推进，但未完成的正文处理不能伪记为完成。
@@ -31,3 +31,13 @@
 从来源提取事实、要求、改期、取消和明确完成信息，保留原文依据及可定位来源。过滤普通自愿活动，不因所有群成员都收到就判断本人必须参加。只更新 events.md、source-state.md、status.md 及本轮 collection/handoff。不写 profile/focus/tasks、不写 Apple 提醒事项。
 
 真实测试允许部分渠道阻塞；报告准确覆盖和漏读位置，不将演示样本当全量成功。完成后停止，返回简短统计与报告路径，避免在聊天里复述私人正文。
+
+## 增量检查的实际执行
+
+使用 `scripts/source_checks.py`（可导入函数或运行 CLI，`--help` 查看参数）处理列表候选与逐字稿变化，不复制上轮临时代码。它只检查观测和文件，不读取聊天数据库，不决定事件含义。
+
+- **聊天**：每个范围内会话保留独立观测；不能用显示名作为字典唯一键合并同名聊天。先按用户配置排除及限制时段/列表位置，再调用 `chat_decision(current, previous)`。current 的 authorized、identity_status、identity_key、preview_complete、preview_kind、time_precise、observation_after_displayed_minute 只能来自实际证据；未知不填 true。previous 的 body_verified 表示上轮确实读完正文边界。模糊日期、图片/视频等类型预览、截断预览或未知身份均进入 needs_read。
+- 每个 needs_read 候选都要在本轮进入正文核对。collection 中记录 `source_id, reason, attempted, outcome`，outcome 为 read / pending；pending 必须写实际阻塞原因。不能仅因没有未读、指纹一样或上轮已看过而跳过。受阻保留旧正文 boundary，只更新列表 observed_at。正常无变化仅表示列表观测无变化。
+- **逐字稿**：调用 `transcript_probe(path, previous, recording=...)`。先核对录音状态，仍在录音/写入则 recording=True。文件不存在、为空、仍变化都保留 pending；缺少旧 content_sha256 时返回 needs_read，不抛异常，也不判为 unchanged。新旧来源都要检查，不能只遍历“不认识的文件夹”。
+- probe 返回的 observed_sha256 是本轮文件观测；只有读完整份文字并提取/过滤后，才把该值提交为 content_sha256、processing_state=processed。pending 时保留上次已处理 hash（首次为 null）；不可把刚探测的 hash 写成已处理。提交前再 probe 一次，若 hash 变了则保留 pending，下一轮重读去重。
+- 每次来源提交携带当前 run_id 和 observed_at，并重写本轮 incremental_result；不要继承旧的“无变化”结论。存储工具自动对齐 last_incremental_run_id/check，并删除跨轮原样继承的旧结论；新结论写入当前 coverage 和核对记录。
