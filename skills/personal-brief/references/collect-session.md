@@ -10,6 +10,8 @@
 
 ## 读取
 
+QQ 增量先读 [QQ 列表增量判断](qq-incremental.md)，使用其中可复用观测和 QQ 专用判断；下列其他来源的保守预览规则不覆盖该分支。
+
 - QQ/微信：遵循 config 的首次与增量规则、排除名单。打开前记录原未读状态，读后恢复原未读标记并核验；恢复失败记为缺口。只恢复标记，不承诺恢复原未读条数。
 - 先检查来源是否启用和本轮范围；暂停或取消的来源不打开、不重试登录，整理回源也不得越过此限制。若配置会话数量上限，按列表前N个位置处理（排除项计入），不能继续向下补足N个有效会话或补历史基线。会话内找到上次成功边界即停，找不到则记录缺口，避免无界翻页。用户报告退出登录或安全提示时停止该来源，不尝试规避检测。
 - 时间和末条预览作为候选判断；无法判断是否有更新时必须进入会话核对（明确排除的会话除外）。不得依赖未读标记判断已采集。跨午夜/星期/日期显示统一结合当前时间解释，无法解释保留原值。
@@ -36,7 +38,7 @@
 
 使用 `scripts/source_checks.py`（可导入函数或运行 CLI，`--help` 查看参数）处理列表候选与逐字稿变化，不复制上轮临时代码。它只检查观测和文件，不读取聊天数据库，不决定事件含义。
 
-- **聊天**：每个范围内会话保留独立观测；不能用显示名作为字典唯一键合并同名聊天。先按用户配置排除及限制时段/列表位置，再调用 `chat_decision(current, previous)`。current 的 authorized、identity_status、identity_key、preview_complete、preview_kind、time_precise、observation_after_displayed_minute 只能来自实际证据；未知不填 true。previous 的 body_verified 表示上轮确实读完正文边界。模糊日期、图片/视频等类型预览、截断预览或未知身份均进入 needs_read。
+- **其他聊天来源（QQ 见专用规则）**：每个范围内会话保留独立观测；不能用显示名作为字典唯一键合并同名聊天。先按用户配置排除及限制时段/列表位置，再调用 `chat_decision(current, previous)`。current 的 authorized、identity_status、identity_key、preview_complete、preview_kind、time_precise、observation_after_displayed_minute 只能来自实际证据；未知不填 true。previous 的 body_verified 表示上轮确实读完正文边界。模糊日期、图片/视频等类型预览、截断预览或未知身份均进入 needs_read。
 - 每个 needs_read 候选都要在本轮进入正文核对。collection 中记录 `source_id, reason, attempted, outcome`，outcome 为 read / pending；pending 必须写实际阻塞原因。不能仅因没有未读、指纹一样或上轮已看过而跳过。受阻保留旧正文 boundary，只更新列表 observed_at。正常无变化仅表示列表观测无变化。
 - **逐字稿**：调用 `transcript_probe(path, previous, recording=...)`。先核对录音状态，仍在录音/写入则 recording=True。文件不存在、为空、仍变化都保留 pending；缺少旧 content_sha256 时返回 needs_read，不抛异常，也不判为 unchanged。新旧来源都要检查，不能只遍历“不认识的文件夹”。
 - probe 返回的 observed_sha256 是本轮文件观测；只有读完整份文字并提取/过滤后，才把该值提交为 content_sha256、processing_state=processed。pending 时保留上次已处理 hash（首次为 null）；不可把刚探测的 hash 写成已处理。提交前再 probe 一次，若 hash 变了则保留 pending，下一轮重读去重。

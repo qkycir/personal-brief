@@ -41,3 +41,5 @@ python3 <skill>/scripts/brief_store.py --data-dir <data> export
 
 
 来源增量字段：sources 提交当前 run_id 时，工具自动把 last_incremental_run_id / last_incremental_check 对齐到该 run_id / observed_at，跨轮原样复制的 incremental_result 会被移除，原记录仍保留在 revisions。selected_path 来源的 content_sha256 可为 null，表示尚未完成正文处理；observed_sha256 仅为文件观测，不能代替已处理指纹。具体核对流程见 collect-session.md 的“增量检查的实际执行”。
+
+QQ sources 可增加 accepted_list_observation（已接受的列表快照）、list_observation（最新观测）、pending_incremental（未完成的新变化）与 historical_gaps（历史范围缺口）；读取方式见 [QQ 列表增量判断](qq-incremental.md)。快照更新不自动推进正文 boundary。
