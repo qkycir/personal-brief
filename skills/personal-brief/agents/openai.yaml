@@ -1,0 +1,4 @@
+interface:
+  display_name: "Personal Brief · 个人简报"
+  short_description: "通过 Computer Use 读取 QQ、微信，筛选重要通知、核验原文并整理个人待办"
+  default_prompt: "使用 $personal-brief，先读取我指定的私人配置和偏好，再通过 Computer Use 读取授权的 QQ、微信会话，核验重要事项并整理待办。"
